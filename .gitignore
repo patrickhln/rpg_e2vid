@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Data / artifacts
+data/*.zip
+data/*.txt
+
+# Model weights 
+pretrained/*.pth.tar
+

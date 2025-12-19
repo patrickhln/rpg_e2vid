@@ -12,9 +12,24 @@ class CudaTimer:
         self.timer_name = timer_name
         if self.timer_name not in cuda_timers:
             cuda_timers[self.timer_name] = []
+            
+        try:
+            from torch.cuda import Event as CudaEvent
+            if torch.cuda.is_available():
+                self.cuda_supported = True
+            else:
+                self.cuda_supported = False
+        except Exception:
+            self.cuda_supported = False
+        
+        if not self.cuda_supported:
+            class CudaEvent:
+                def __init__(self, *args, **kwargs): pass
+                def record(self, *args, **kwargs): pass
+                def elapsed_time(self, *args, **kwargs): return 0
 
-        self.start = torch.cuda.Event(enable_timing=True)
-        self.end = torch.cuda.Event(enable_timing=True)
+        self.start = CudaEvent(enable_timing=True) if self.cuda_supported else CudaEvent()
+        self.end   = CudaEvent(enable_timing=True) if self.cuda_supported else CudaEvent()
 
     def __enter__(self):
         self.start.record()
@@ -22,9 +37,12 @@ class CudaTimer:
 
     def __exit__(self, *args):
         self.end.record()
-        torch.cuda.synchronize()
-        cuda_timers[self.timer_name].append(self.start.elapsed_time(self.end))
-
+        if self.cuda_supported:
+            import torch
+            torch.cuda.synchronize()
+            cuda_timers[self.timer_name].append(self.start.elapsed_time(self.end))
+        else:
+            cuda_timers[self.timer_name].append(0)
 
 class Timer:
     def __init__(self, timer_name=''):

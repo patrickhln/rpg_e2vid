@@ -15,7 +15,7 @@ class ImageReconstructor:
     def __init__(self, model, height, width, num_bins, options):
 
         self.model = model
-        self.use_gpu = options.use_gpu
+        self.use_gpu = options.use_gpu and torch.cuda.is_available()
         self.device = torch.device('cuda:0') if self.use_gpu else torch.device('cpu')
         self.height = height
         self.width = width
