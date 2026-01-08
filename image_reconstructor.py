@@ -11,12 +11,26 @@ from collections import deque
 import torch.nn.functional as F
 
 
+def _xpu_available():
+    """Check if Intel XPU (via IPEX) is available."""
+    try:
+        import intel_extension_for_pytorch as ipex
+        return torch.xpu.is_available()
+    except (ImportError, AttributeError):
+        return False
+
+
 class ImageReconstructor:
     def __init__(self, model, height, width, num_bins, options):
 
         self.model = model
-        self.use_gpu = options.use_gpu and torch.cuda.is_available()
-        self.device = torch.device('cuda:0') if self.use_gpu else torch.device('cpu')
+        self.use_gpu = options.use_gpu and (torch.cuda.is_available() or _xpu_available())
+        if options.use_gpu and torch.cuda.is_available():
+            self.device = torch.device('cuda:0')
+        elif options.use_gpu and _xpu_available():
+            self.device = torch.device('xpu:0')
+        else:
+            self.device = torch.device('cpu')
         self.height = height
         self.width = width
         self.num_bins = num_bins

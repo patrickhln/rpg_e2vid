@@ -488,7 +488,7 @@ def events_to_voxel_grid_pytorch(events, num_bins, width, height, device):
     :return voxel_grid: PyTorch event tensor (on the device specified)
     """
 
-    DeviceTimer = CudaTimer if device.type == 'cuda' else Timer
+    DeviceTimer = CudaTimer if device.type in ('cuda', 'xpu') else Timer
 
     assert(events.shape[1] == 4)
     assert(num_bins > 0)

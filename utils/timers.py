@@ -13,6 +13,7 @@ class CudaTimer:
         if self.timer_name not in cuda_timers:
             cuda_timers[self.timer_name] = []
             
+        # Check for CUDA support
         try:
             from torch.cuda import Event as CudaEvent
             if torch.cuda.is_available():
@@ -22,14 +23,31 @@ class CudaTimer:
         except Exception:
             self.cuda_supported = False
         
+        # Check for XPU (Intel GPU) support
+        self.xpu_supported = False
         if not self.cuda_supported:
+            try:
+                import intel_extension_for_pytorch as ipex
+                if torch.xpu.is_available():
+                    self.xpu_supported = True
+            except (ImportError, AttributeError):
+                pass
+        
+        if not self.cuda_supported and not self.xpu_supported:
             class CudaEvent:
                 def __init__(self, *args, **kwargs): pass
                 def record(self, *args, **kwargs): pass
                 def elapsed_time(self, *args, **kwargs): return 0
 
-        self.start = CudaEvent(enable_timing=True) if self.cuda_supported else CudaEvent()
-        self.end   = CudaEvent(enable_timing=True) if self.cuda_supported else CudaEvent()
+        if self.cuda_supported:
+            self.start = CudaEvent(enable_timing=True)
+            self.end   = CudaEvent(enable_timing=True)
+        elif self.xpu_supported:
+            self.start = torch.xpu.Event(enable_timing=True)
+            self.end   = torch.xpu.Event(enable_timing=True)
+        else:
+            self.start = CudaEvent()
+            self.end   = CudaEvent()
 
     def __enter__(self):
         self.start.record()
@@ -40,6 +58,10 @@ class CudaTimer:
         if self.cuda_supported:
             import torch
             torch.cuda.synchronize()
+            cuda_timers[self.timer_name].append(self.start.elapsed_time(self.end))
+        elif self.xpu_supported:
+            import torch
+            torch.xpu.synchronize()
             cuda_timers[self.timer_name].append(self.start.elapsed_time(self.end))
         else:
             cuda_timers[self.timer_name].append(0)
