@@ -81,7 +81,8 @@ class FixedDurationEventReader:
                 if self.last_stamp is None:
                     self.last_stamp = t
                 if t > self.last_stamp + self.duration_s:
-                    self.last_stamp = t
+                    # self.last_stamp = t
+                    self.last_stamp = self.last_stamp + self.duration_s
                     event_window = np.array(event_list)
                     return event_window
 
