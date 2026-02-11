@@ -13,10 +13,7 @@ def _xpu_available():
 
 def load_model(path_to_model):
     print('Loading model {}...'.format(path_to_model))
-    if torch.cuda.is_available() or _xpu_available():
-        raw_model = torch.load(path_to_model)
-    else:
-        raw_model = torch.load(path_to_model, map_location=torch.device('cpu'))
+    raw_model = torch.load(path_to_model, map_location=torch.device('cpu'))
     arch = raw_model['arch']
 
     try:
