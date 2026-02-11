@@ -39,8 +39,8 @@ if __name__ == "__main__":
     # Read sensor size from the first first line of the event file
     path_to_events = args.input_file
 
-    header = pd.read_csv(path_to_events, delim_whitespace=True, header=None, names=['width', 'height'],
-                         dtype={'width': np.int, 'height': np.int},
+    header = pd.read_csv(path_to_events, sep=r'\s+', header=None, names=['width', 'height'],
+                         dtype={'width': int, 'height': int},
                          nrows=1)
     width, height = header.values[0]
     print('Sensor size: {} x {}'.format(width, height))
@@ -48,6 +48,7 @@ if __name__ == "__main__":
     # Load model
     model = load_model(args.path_to_model)
     device = get_device(args.use_gpu)
+    print(f'Starting E2VID on {device}')
 
     model = model.to(device)
     model.eval()
