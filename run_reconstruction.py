@@ -3,6 +3,7 @@ from utils.loading_utils import load_model, get_device
 import numpy as np
 import argparse
 import pandas as pd
+import os
 from utils.event_readers import FixedSizeEventReader, FixedDurationEventReader
 from utils.inference_utils import events_to_voxel_grid, events_to_voxel_grid_pytorch
 from utils.timers import Timer
@@ -89,6 +90,12 @@ if __name__ == "__main__":
         event_window_iterator = FixedSizeEventReader(path_to_events, num_events=N, start_index=start_index)
 
     with Timer('Processing entire dataset'):
+        start_time = time.time()
+        progress_stream = getattr(event_window_iterator, 'event_file', None)
+        if progress_stream is not None:
+            progress_stream = progress_stream.buffer if hasattr(progress_stream, 'buffer') else progress_stream
+        total_bytes = os.path.getsize(path_to_events) if args.fixed_duration and path_to_events.endswith('.txt') and hasattr(progress_stream, 'tell') else 0
+        next_report = start_time + 1.0
         for event_window in event_window_iterator:
 
             last_timestamp = event_window[-1, 0]
@@ -111,3 +118,11 @@ if __name__ == "__main__":
             reconstructor.update_reconstruction(event_tensor, start_index + num_events_in_window, last_timestamp)
 
             start_index += num_events_in_window
+            now = time.time()
+            if total_bytes and progress_stream is not None and now >= next_report:
+                progress = min(max(progress_stream.tell() / float(total_bytes), 1e-6), 1.0)
+                eta_min = (now - start_time) * (1.0 - progress) / progress / 60.0
+                print('\rProgress: {:.1f}% | ETA: {:.1f} min'.format(progress * 100.0, eta_min), end='', flush=True)
+                next_report = now + 1.0
+        if total_bytes:
+            print()
